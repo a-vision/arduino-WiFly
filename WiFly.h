@@ -62,7 +62,6 @@ public:
   bool connect(const char *ssid, const char *pass);
   bool listen(const char *port);
 
-  bool data_available();
   String read(const char *until);
   String read();
   String readln();
@@ -72,17 +71,32 @@ public:
   void debug(const char *msg);
   void debug(const char *msg, bool newline);
 
+  bool monitor();
+  void onConnect(void (*listener)());
+  void onDisconnect(void (*listener)());
+  void onData(void (*listener)(String data));
+
 private:
-  const char *local_port = "";
+  // Status flags
   bool initialised = false;
+  bool network_available = false;
   bool connected = false;
+
+  // Event listeners
+  void (*onConnectListener)() = NULL;
+  void (*onDisconnectListener)() = NULL;
+  void (*onDataListener)(String data) = NULL;
+
+  const char *local_port = "";
   char TX_Fifo_Address = THR;
+
   struct SPI_UART_cfg SPI_Uart_config = {
       0x60, 0x00, 0x03, (char)(EFR_ENABLE_CTS | EFR_ENABLE_RTS | EFR_ENABLE_ENHANCED_FUNCTIONS)};
 
   void select(void);
   void deselect(void);
 
+  bool data_available();
   bool wait_for_reponse(const char *find, int timeout);
 
   void Flush_RX();

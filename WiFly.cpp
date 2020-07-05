@@ -201,7 +201,7 @@ void WiFlyDevice::Flush_RX(void)
   int j = 0;
   while (j < 1000)
   {
-    if ((SPI_Uart_ReadByte(LSR) & 0x01))
+    if (data_available())
     {
       incoming_data = SPI_Uart_ReadByte(RHR);
       if (incoming_data < 0)
@@ -232,14 +232,17 @@ bool WiFlyDevice::wait_for_reponse(const char * find, int timeout = 10000)
   char data[] = " ";
   int j = 0;
 
-  debug("FIND:", false);
-  debug(find);
+  if (timeout > 100) 
+  {
+    debug("FIND:", false);
+    debug(find);
+  }
 
   timeOutTarget = millis() + timeout;
 
   while (!found && !timedout)
   {
-    if ((SPI_Uart_ReadByte(LSR) & 0x01))
+    if (data_available())
     {
       incoming_data = SPI_Uart_ReadByte(RHR);
       if (incoming_data < 0)
@@ -249,7 +252,10 @@ bool WiFlyDevice::wait_for_reponse(const char * find, int timeout = 10000)
       else 
       {
         data[0] = incoming_data;
-        debug(data, false);
+        if (timeout > 100) 
+        {
+          debug(data, false);
+        }
         response.concat(incoming_data);
 
         found = (response.indexOf(find) >= 0);
@@ -261,11 +267,13 @@ bool WiFlyDevice::wait_for_reponse(const char * find, int timeout = 10000)
     }
     timedout = (millis() > timeOutTarget);
   }
-  debug("");
+  if (timeout > 100)
+  {
+    debug("");
 
-  debug("REPONSE:", false);
-  debug(&response[0]);
-
+    debug("REPONSE:", false);
+    debug(&response[0]);
+  }
   return found;
 }
 
@@ -273,9 +281,9 @@ bool WiFlyDevice::connect(const char *ssid, const char *pass)
 {
   char auth_level[] = "4";
 
-  connected = false;
+  network_available = false;
 
-      if (!initialised)
+  if (!initialised)
   {
     init();
   }
@@ -304,7 +312,6 @@ bool WiFlyDevice::connect(const char *ssid, const char *pass)
     debug("Rebooting...");
     SPI_Uart_println("reboot");
     Flush_RX();
-    //delay(REBOOT_TIMEOUT);
     wait_for_reponse("*READY*", REBOOT_TIMEOUT);
 
     // Enter command mode
@@ -343,20 +350,21 @@ bool WiFlyDevice::connect(const char *ssid, const char *pass)
     SPI_Uart_println(ssid);
     Flush_RX();
 
-    connected = wait_for_reponse("Associated!", ASSOCIATE_TIMEOUT);
+    network_available = wait_for_reponse("Associated!", ASSOCIATE_TIMEOUT);
 
     Flush_RX();
 
-    if (connected) {
+    if (network_available)
+    {
       #if BEEP
       tone(BEEP, 2000, 500);
       #endif
     }
 
     SPI_Uart_println("set sys iofunc 0x40");
-    Flush_RX();    
+    Flush_RX();
 
-    return connected;
+    return network_available;
   }
   return false;
 }
@@ -442,7 +450,10 @@ String WiFlyDevice::read(const char *until = "")
     else
     {
       data[0] = incoming_data;
-      debug(data, false);
+      if (until != "")
+      {
+        debug(data, false);
+      }
       response.concat(incoming_data);
 
       if (until != "") {
@@ -454,16 +465,88 @@ String WiFlyDevice::read(const char *until = "")
       }
     }
   }
-  debug("");
+  if (until != "" && response.length() > 0) {
+    debug("");
+  }
 
   return (response);
 }
 
 bool WiFlyDevice::write(char *data)
 {
+  SPI_Uart_print(data);
   return true;
 }
 
 WiFlyDevice::WiFlyDevice()
 {
+  initialised = false;
+  network_available = false;
+  connected = false;
+}
+
+bool WiFlyDevice::monitor()
+{
+  // Constantly check for connection and data
+  static String stream = "";
+
+  stream.concat(read(""));
+
+  int detectOPENpos = stream.lastIndexOf("*OPEN*");
+  int detectCLOSEpos = stream.lastIndexOf("*CLOS*");
+  int detectDATApos = stream.lastIndexOf("\r");
+
+  stream.trim();
+  if (!connected) {
+    if (detectOPENpos >= 0)
+    {
+      debug("CLIENT OPEN");
+      connected = true;
+      if (onConnectListener != NULL)
+      {
+        debug("CONNECT CALLBACK");
+        onConnectListener();
+      }
+      stream = "";
+    }
+  }
+  else
+  {
+    if (detectCLOSEpos >= 0)
+    {
+      debug("CLIENT CLOSED");
+      connected = false;
+      if (onDisconnectListener != NULL)
+      {
+        debug("DISCONNECT CALLBACK");
+        onDisconnectListener();
+      }
+      stream = "";
+    }
+    if (detectDATApos >= 0)
+    {
+      debug("CLIENT DATA");
+      if (onDataListener != NULL)
+      {
+        debug("DATA CALLBACK");
+        onDataListener(stream);
+      }
+      stream = "";
+    }
+  }
+
+  return true;
+}
+
+void WiFlyDevice::onConnect(void (*listener)())
+{
+  onConnectListener = listener;
+}
+void WiFlyDevice::onDisconnect(void (*listener)())
+{
+  onDisconnectListener = listener;
+}
+void WiFlyDevice::onData(void (*listener)(String data))
+{
+  onDataListener = listener;
 }
