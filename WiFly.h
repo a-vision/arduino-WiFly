@@ -59,17 +59,13 @@ class WiFlyDevice
 
 public:
   WiFlyDevice();
-  bool connect(const char *ssid, const char *pass);
-  bool listen(const char *port);
+  bool connect(String ssid, String pass);
+  bool listen(String port);
 
-  String read(const char *until);
+  String read(String  until);
   String read();
   String readln();
-  bool write(char *data);
-
-  char *info();
-  void debug(const char *msg);
-  void debug(const char *msg, bool newline);
+  bool write(String  data);
 
   bool monitor();
   void onConnect(void (*listener)());
@@ -87,7 +83,7 @@ private:
   void (*onDisconnectListener)() = NULL;
   void (*onDataListener)(String data) = NULL;
 
-  const char *local_port = "";
+  String local_port = "";
   char TX_Fifo_Address = THR;
 
   struct SPI_UART_cfg SPI_Uart_config = {
@@ -97,19 +93,22 @@ private:
   void deselect(void);
 
   bool data_available();
-  bool wait_for_reponse(const char *find, int timeout);
+  bool wait_for_reponse(String  find, int timeout);
 
   void Flush_RX();
+  void SPI_Uart_WriteArray(String data, long int NumBytes);
   void SPI_Uart_WriteByte(char address, char data);
-  long int SPI_Write(const char *srcptr, long int length);
-  void SPI_Uart_WriteArray(const char *data, long int NumBytes);
   char SPI_Uart_ReadByte(char address);
   bool SPI_Uart_Init(void);
+  long int SPI_Write(const char *srcptr, long int length);
 
-  void SPI_Uart_println(const char *data);
-  void SPI_Uart_print(const char *data);
+  void SPI_Uart_println(String data);
+  void SPI_Uart_print(String data);
   char spi_transfer(volatile char data);
-  void error(const char *msg);
+
+  void debug(String msg);
+  void debug(String msg, bool newline);
+  void error(String msg);
 
   void init();
 };

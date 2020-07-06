@@ -12,10 +12,10 @@
 #define DEBUG false
 #define BEEP 8 // Portnumber of the buzzer (set to false to disable)
 
-void WiFlyDevice::error(const char *msg)
+void WiFlyDevice::error(String msg)
 {
   Serial.println(msg);
-  #ifdef BEEP
+  #if BEEP
   tone(BEEP, 2000, 1000);
   delay(1500);
   tone(BEEP, 2000, 1000);
@@ -24,11 +24,11 @@ void WiFlyDevice::error(const char *msg)
   #endif
   while (true);
 }
-void WiFlyDevice::debug(const char *msg)
+void WiFlyDevice::debug(String msg)
 {
   debug(msg, true);
 }
-void WiFlyDevice::debug(const char *msg, bool newline)
+void WiFlyDevice::debug(String msg, bool newline)
 {
   #if DEBUG 
   if (newline) {
@@ -109,9 +109,10 @@ long int WiFlyDevice::SPI_Write(const char *srcptr, long int length)
   return length;
 }
 
-void WiFlyDevice::SPI_Uart_WriteArray(const char *data, long int NumBytes)
+void WiFlyDevice::SPI_Uart_WriteArray(String str, long int NumBytes)
 // Write string to SC16IS750 THR
 {
+  const char *data = str.c_str();
   long int length;
   select();
   length = SPI_Write(&TX_Fifo_Address, 1);
@@ -166,21 +167,21 @@ bool WiFlyDevice::SPI_Uart_Init(void) // Initialize and test SC16IS750
   return false;
 }
 
-void WiFlyDevice::SPI_Uart_println(const char *data)
+void WiFlyDevice::SPI_Uart_println(String data)
 // Write array to SC16IS750 followed by a carriage return
 {
   debug(data);
-  SPI_Uart_WriteArray(data, strlen(data));
+  SPI_Uart_WriteArray(data, data.length());
   SPI_Uart_WriteByte(THR, 0x0d);
   delay(250);
 }
 
-void WiFlyDevice::SPI_Uart_print(const char *data)
+void WiFlyDevice::SPI_Uart_print(String data)
 // Routine to write array to SC16IS750 using strlen instead of hardcoded length
 {
   debug("send: ", false);
   debug(data, false);
-  SPI_Uart_WriteArray(data, strlen(data));
+  SPI_Uart_WriteArray(data, data.length());
   delay(250);
 }
 
@@ -220,7 +221,7 @@ void WiFlyDevice::Flush_RX(void)
   delay(250);
 }
 
-bool WiFlyDevice::wait_for_reponse(const char * find, int timeout = 10000)
+bool WiFlyDevice::wait_for_reponse(String find, int timeout = 10000)
 {
   bool found = false;
   bool nodata = false;
@@ -272,12 +273,12 @@ bool WiFlyDevice::wait_for_reponse(const char * find, int timeout = 10000)
     debug("");
 
     debug("REPONSE:", false);
-    debug(&response[0]);
+    debug(response);
   }
   return found;
 }
 
-bool WiFlyDevice::connect(const char *ssid, const char *pass)
+bool WiFlyDevice::connect(String ssid, String pass)
 {
   char auth_level[] = "4";
 
@@ -369,15 +370,7 @@ bool WiFlyDevice::connect(const char *ssid, const char *pass)
   return false;
 }
 
-char * WiFlyDevice::info()
-{
-  Flush_RX();
-  SPI_Uart_println("get everything");
-
-  wait_for_reponse("I have everything");
-}
-
-bool WiFlyDevice::listen(const char *port)
+bool WiFlyDevice::listen(String port)
 {
   if (!initialised) {
     local_port = port;
@@ -432,7 +425,7 @@ String WiFlyDevice::read()
 {
   return read("");
 }
-String WiFlyDevice::read(const char *until = "")
+String WiFlyDevice::read(String until = "")
 // Read until no data or until is found
 {
   bool found = false;
@@ -460,7 +453,7 @@ String WiFlyDevice::read(const char *until = "")
         found = (response.indexOf(until) >= 0);
         if (found)
         {
-          response = response.substring(0, response.length() - strlen(until));
+          response = response.substring(0, response.length() - until.length());
         }
       }
     }
@@ -472,7 +465,7 @@ String WiFlyDevice::read(const char *until = "")
   return (response);
 }
 
-bool WiFlyDevice::write(char *data)
+bool WiFlyDevice::write(String data)
 {
   SPI_Uart_print(data);
   return true;
