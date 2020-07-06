@@ -1,6 +1,6 @@
 /*
 
-  A-Vision Software
+  (c) A-Vision Software
 
 */
 #include <string.h>

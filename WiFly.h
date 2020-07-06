@@ -1,6 +1,6 @@
 /*
 
-  A-Vision Software
+  (c) A-Vision Software
 
 */
 #ifndef __WIFLY_H__
