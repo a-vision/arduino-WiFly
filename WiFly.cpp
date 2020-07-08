@@ -281,6 +281,8 @@ bool WiFlyDevice::wait_for_reponse(String find, int timeout = 10000)
 bool WiFlyDevice::connect(String ssid, String pass)
 {
   char auth_level[] = "4";
+  String ip_address = "0.0.0.0";
+  String ip_port = local_port;
 
   network_available = false;
 
@@ -359,7 +361,31 @@ bool WiFlyDevice::connect(String ssid, String pass)
     {
       #if BEEP
       tone(BEEP, 2000, 500);
+      delay(550);
       #endif
+
+      if (onWifiListener != NULL)
+      {
+        debug("WIFI CALLBACK");
+
+        SPI_Uart_println("get ip");
+
+        wait_for_reponse("IP=");
+        ip_address = read(":");
+        ip_port = read("\r");
+
+        debug("IP ADDRESS IS: ", false);
+        debug(ip_address);
+        debug("IP PORT IS: ", false);
+        debug(ip_port);
+
+        Flush_RX();
+
+        #if BEEP
+        tone(BEEP, 2000, 50);
+        #endif
+        onWifiListener(ip_address, ip_port);
+      }
     }
 
     SPI_Uart_println("set sys iofunc 0x40");
@@ -531,6 +557,10 @@ bool WiFlyDevice::monitor()
   return true;
 }
 
+void WiFlyDevice::onWifi(void (*listener)())
+{
+  onWifiListener = listener;
+}
 void WiFlyDevice::onConnect(void (*listener)())
 {
   onConnectListener = listener;
