@@ -9,11 +9,15 @@
 
 #include "WiFly.h"
 
-#define DEBUG false
+#define DEBUG true
 #define BEEP 8 // Portnumber of the buzzer (set to false to disable)
 
 void WiFlyDevice::error(String msg)
 {
+  if (onErrorListener != NULL)
+  {
+    onErrorListener(msg);
+  }
   Serial.println(msg);
   #if BEEP
   tone(BEEP, 2000, 1000);
@@ -557,7 +561,11 @@ bool WiFlyDevice::monitor()
   return true;
 }
 
-void WiFlyDevice::onWifi(void (*listener)())
+void WiFlyDevice::onError(void (*listener)(String msg))
+{
+  onErrorListener = listener;
+}
+void WiFlyDevice::onWifi(void (*listener)(String address, String port))
 {
   onWifiListener = listener;
 }

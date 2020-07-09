@@ -68,7 +68,8 @@ public:
   bool write(String  data);
 
   bool monitor();
-  void onWifi(void (*listener)());
+  void onError(void (*listener)(String msg));
+  void onWifi(void (*listener)(String address, String port));
   void onConnect(void (*listener)());
   void onDisconnect(void (*listener)());
   void onData(void (*listener)(String data));
@@ -80,6 +81,7 @@ private:
   bool connected = false;
 
   // Event listeners
+  void (*onErrorListener)(String msg) = NULL;
   void (*onWifiListener)(String address, String port) = NULL;
   void (*onConnectListener)() = NULL;
   void (*onDisconnectListener)() = NULL;
