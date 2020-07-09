@@ -60,7 +60,7 @@ class WiFlyDevice
 public:
   WiFlyDevice();
   bool connect(String ssid, String pass);
-  bool listen(String port);
+  bool listen(int port);
 
   String read(String  until);
   String read();
@@ -69,11 +69,12 @@ public:
 
   bool monitor();
   void onError(void (*listener)(String msg));
-  void onWifi(void (*listener)(String address, String port));
+  void onWifi(void (*listener)(String address, int port));
   void onConnect(void (*listener)());
   void onDisconnect(void (*listener)());
   void onData(void (*listener)(String data));
 
+  void interactive();
 private:
   // Status flags
   bool initialised = false;
@@ -82,12 +83,12 @@ private:
 
   // Event listeners
   void (*onErrorListener)(String msg) = NULL;
-  void (*onWifiListener)(String address, String port) = NULL;
+  void (*onWifiListener)(String address, int port) = NULL;
   void (*onConnectListener)() = NULL;
   void (*onDisconnectListener)() = NULL;
   void (*onDataListener)(String data) = NULL;
 
-  String local_port = "";
+  int local_port = 0;
   char TX_Fifo_Address = THR;
 
   struct SPI_UART_cfg SPI_Uart_config = {

@@ -9,7 +9,10 @@
 
 #include "WiFly.h"
 
-#define DEBUG true
+#define DEBUG false
+
+#include "debug.h"
+
 #define BEEP 8 // Portnumber of the buzzer (set to false to disable)
 
 void WiFlyDevice::error(String msg)
@@ -28,13 +31,14 @@ void WiFlyDevice::error(String msg)
   #endif
   while (true);
 }
-void WiFlyDevice::debug(String msg)
+/*
+void WiFlyDevice::DBG(String msg)
 {
-  debug(msg, true);
+  DBG(msg, true);
 }
-void WiFlyDevice::debug(String msg, bool newline)
+void WiFlyDevice::DBG(String msg, bool newline)
 {
-  #if DEBUG 
+  #if DEBUG
   if (newline) {
     Serial.println(msg);
   }
@@ -44,6 +48,7 @@ void WiFlyDevice::debug(String msg, bool newline)
   }
   #endif
 }
+*/
 
 void WiFlyDevice::init()
 {
@@ -67,11 +72,11 @@ void WiFlyDevice::init()
   clr = SPDR;
   delay(10);
 
-  debug("WiFly network connection");
+  DBG("WiFly network connection", true);
   // Initialize and test SC16IS750
   if (SPI_Uart_Init())
   {
-    debug("Bridge initialized successfully!");
+    DBG("Bridge initialized successfully!", true);
   }
   else
   {
@@ -174,7 +179,7 @@ bool WiFlyDevice::SPI_Uart_Init(void) // Initialize and test SC16IS750
 void WiFlyDevice::SPI_Uart_println(String data)
 // Write array to SC16IS750 followed by a carriage return
 {
-  debug(data);
+  DBG(data, true);
   SPI_Uart_WriteArray(data, data.length());
   SPI_Uart_WriteByte(THR, 0x0d);
   delay(250);
@@ -183,8 +188,8 @@ void WiFlyDevice::SPI_Uart_println(String data)
 void WiFlyDevice::SPI_Uart_print(String data)
 // Routine to write array to SC16IS750 using strlen instead of hardcoded length
 {
-  debug("send: ", false);
-  debug(data, false);
+  DBG("send: ", false);
+  DBG(data, false);
   SPI_Uart_WriteArray(data, data.length());
   delay(250);
 }
@@ -214,14 +219,14 @@ void WiFlyDevice::Flush_RX(void)
         return;
       }
       data[0] = incoming_data;
-      debug(data, false);
+      DBG(data, false);
     }
     else
     {
       j++;
     }
   }
-  debug("");
+  DBG("", true);
   delay(250);
 }
 
@@ -237,10 +242,13 @@ bool WiFlyDevice::wait_for_reponse(String find, int timeout = 10000)
   char data[] = " ";
   int j = 0;
 
-  if (timeout > 100) 
+  if (timeout > 100)
   {
-    debug("FIND:", false);
-    debug(find);
+    DBG("FIND:", false);
+    DBG(find, false);
+    DBG(" in ", false);
+    DBG(String(timeout), false);
+    DBG(" ms", true);
   }
 
   timeOutTarget = millis() + timeout;
@@ -253,13 +261,13 @@ bool WiFlyDevice::wait_for_reponse(String find, int timeout = 10000)
       if (incoming_data < 0)
       {
         nodata = true;
-      } 
-      else 
+      }
+      else
       {
         data[0] = incoming_data;
-        if (timeout > 100) 
+        if (timeout > 100)
         {
-          debug(data, false);
+          DBG(data, false);
         }
         response.concat(incoming_data);
 
@@ -274,10 +282,10 @@ bool WiFlyDevice::wait_for_reponse(String find, int timeout = 10000)
   }
   if (timeout > 100)
   {
-    debug("");
+    DBG("", true);
 
-    debug("REPONSE:", false);
-    debug(response);
+    DBG("REPONSE:", false);
+    DBG(response, true);
   }
   return found;
 }
@@ -286,7 +294,7 @@ bool WiFlyDevice::connect(String ssid, String pass)
 {
   char auth_level[] = "4";
   String ip_address = "0.0.0.0";
-  String ip_port = local_port;
+  int ip_port = local_port;
 
   network_available = false;
 
@@ -300,33 +308,37 @@ bool WiFlyDevice::connect(String ssid, String pass)
     // Exit command mode if active at all
     SPI_Uart_println("");
     SPI_Uart_println("exit");
+    if (!wait_for_reponse("EXIT", 1000))
+    {
+      DBG("Uable to leave Command mode", true);
+    }
     Flush_RX();
 
     // Enter command mode
     SPI_Uart_print("$$$");
-    if (!wait_for_reponse("CMD")) 
+    if (!wait_for_reponse("CMD"))
     {
-      error("Uable to enter Command mode");
+      error("Uable to enter Command mode (initial)");
     }
     Flush_RX();
-    
-    debug("User external antenna");
+
+    DBG("User external antenna", true);
     SPI_Uart_println("set wlan ext_antenna 1");
     wait_for_reponse("AOK");
     Flush_RX();
 
     // Reboot to get device into known state
-    debug("Rebooting...");
+    DBG("Rebooting...", true);
     SPI_Uart_println("reboot");
     Flush_RX();
     wait_for_reponse("*READY*", REBOOT_TIMEOUT);
 
     // Enter command mode
-    debug("Entering command mode.");
+    DBG("Entering command mode.", true);
     SPI_Uart_print("$$$");
     if (!wait_for_reponse("CMD"))
     {
-      error("Uable to enter Command mode");
+      error("Uable to enter Command mode (after reboot)");
     }
     Flush_RX();
 
@@ -334,24 +346,24 @@ bool WiFlyDevice::connect(String ssid, String pass)
     SPI_Uart_print("set w a ");
     SPI_Uart_println(auth_level);
     Flush_RX();
-    debug("Set wlan to authorization level ", false);
-    debug(auth_level);
+    DBG("Set wlan to authorization level ", false);
+    DBG(auth_level, true);
 
     // Set passphrase to <auth_phrase>
     SPI_Uart_print("set w p ");
     SPI_Uart_println(pass);
     Flush_RX();
-    debug("Set security phrase to ", false);
-    debug(pass);
+    DBG("Set security phrase to ", false);
+    DBG(pass, true);
 
-    if (local_port != "") {
+    if (local_port) {
       listen(local_port);
     }
 
     // Join wifi network <ssid>
-    debug("Joining '", false);
-    debug(ssid, false);
-    debug("'", true);
+    DBG("Joining '", false);
+    DBG(ssid, false);
+    DBG("'", true);
     Flush_RX();
     SPI_Uart_print("join ");
     SPI_Uart_println(ssid);
@@ -365,23 +377,23 @@ bool WiFlyDevice::connect(String ssid, String pass)
     {
       #if BEEP
       tone(BEEP, 2000, 500);
-      delay(550);
+      delay(600);
       #endif
 
       if (onWifiListener != NULL)
       {
-        debug("WIFI CALLBACK");
+        DBG("WIFI CALLBACK", true);
 
-        SPI_Uart_println("get ip");
+        SPI_Uart_println("get ip a");
+        delay(500);
 
         wait_for_reponse("IP=");
         ip_address = read(":");
-        ip_port = read("\r");
 
-        debug("IP ADDRESS IS: ", false);
-        debug(ip_address);
-        debug("IP PORT IS: ", false);
-        debug(ip_port);
+        DBG("IP ADDRESS IS: ", false);
+        DBG(ip_address, true);
+        DBG("IP PORT IS: ", false);
+        DBG(String(ip_port), true);
 
         Flush_RX();
 
@@ -400,7 +412,7 @@ bool WiFlyDevice::connect(String ssid, String pass)
   return false;
 }
 
-bool WiFlyDevice::listen(String port)
+bool WiFlyDevice::listen(int port)
 {
   if (!initialised) {
     local_port = port;
@@ -410,13 +422,13 @@ bool WiFlyDevice::listen(String port)
   String ip = "";
   String p = "";
 
-  debug("Listen on port '", false);
-  debug(port, false);
-  debug("'", true);
+  DBG("Listen on port '", false);
+  DBG(String(port), false);
+  DBG("'", true);
 
   Flush_RX();
   SPI_Uart_print("set ip localport ");
-  SPI_Uart_println(port);
+  SPI_Uart_println(String(port));
   if (wait_for_reponse("AOK")) {
     success = true;
   }
@@ -429,11 +441,11 @@ bool WiFlyDevice::listen(String port)
   ip.concat(read(":"));
   p.concat(read("\r"));
 
-  debug("IP ADDRESS IS: ", false);
-  debug(&ip[0]);
-  debug("IP PORT IS: ", false);
-  debug(&p[0]);
-  
+  DBG("IP ADDRESS IS: ", false);
+  DBG(&ip[0]);
+  DBG("IP PORT IS: ", false);
+  DBG(&p[0]);
+
   Flush_RX();
 
   return (p == port);
@@ -459,40 +471,52 @@ String WiFlyDevice::read(String until = "")
 // Read until no data or until is found
 {
   bool found = false;
+  bool timedout = false;
+  unsigned int timeOutTarget; // in milliseconds
   String response = "";
 
   char incoming_data;
   char data[] = " ";
 
-  while (!found && data_available())
+  timeOutTarget = millis() + 1000;
+  while (!found && !timedout)
   {
-    incoming_data = SPI_Uart_ReadByte(RHR);
-    if (incoming_data < 0)
-    {
-    }
-    else
-    {
-      data[0] = incoming_data;
-      if (until != "")
+    if (data_available()) {
+      timeOutTarget = millis() + 1000;
+      incoming_data = SPI_Uart_ReadByte(RHR);
+      if (incoming_data < 0)
       {
-        debug(data, false);
       }
-      response.concat(incoming_data);
-
-      if (until != "") {
-        found = (response.indexOf(until) >= 0);
-        if (found)
+      else
+      {
+        data[0] = incoming_data;
+        if (until != "")
         {
-          response = response.substring(0, response.length() - until.length());
+          DBG(data, false);
         }
+        response.concat(incoming_data);
+
+        if (until != "") {
+          found = (response.indexOf(until) >= 0);
+          if (found)
+          {
+            response = response.substring(0, response.length() - until.length());
+          }
+        }
+      }
+    } else {
+      if (until != "") {
+        timedout = (millis() > timeOutTarget);
+      } else {
+        timedout = true;
       }
     }
   }
   if (until != "" && response.length() > 0) {
-    debug("");
+    DBG("", true);
   }
 
-  return (response);
+  return response;
 }
 
 bool WiFlyDevice::write(String data)
@@ -523,11 +547,11 @@ bool WiFlyDevice::monitor()
   if (!connected) {
     if (detectOPENpos >= 0)
     {
-      debug("CLIENT OPEN");
+      DBG("CLIENT OPEN", true);
       connected = true;
       if (onConnectListener != NULL)
       {
-        debug("CONNECT CALLBACK");
+        DBG("CONNECT CALLBACK", true);
         onConnectListener();
       }
       stream = "";
@@ -537,21 +561,21 @@ bool WiFlyDevice::monitor()
   {
     if (detectCLOSEpos >= 0)
     {
-      debug("CLIENT CLOSED");
+      DBG("CLIENT CLOSED", true);
       connected = false;
       if (onDisconnectListener != NULL)
       {
-        debug("DISCONNECT CALLBACK");
+        DBG("DISCONNECT CALLBACK", true);
         onDisconnectListener();
       }
       stream = "";
     }
     if (detectDATApos >= 0)
     {
-      debug("CLIENT DATA");
+      DBG("CLIENT DATA", true);
       if (onDataListener != NULL)
       {
-        debug("DATA CALLBACK");
+        DBG("DATA CALLBACK", true);
         onDataListener(stream);
       }
       stream = "";
@@ -565,7 +589,7 @@ void WiFlyDevice::onError(void (*listener)(String msg))
 {
   onErrorListener = listener;
 }
-void WiFlyDevice::onWifi(void (*listener)(String address, String port))
+void WiFlyDevice::onWifi(void (*listener)(String address, int port))
 {
   onWifiListener = listener;
 }
@@ -580,4 +604,21 @@ void WiFlyDevice::onDisconnect(void (*listener)())
 void WiFlyDevice::onData(void (*listener)(String data))
 {
   onDataListener = listener;
+}
+
+void WiFlyDevice::interactive()
+{
+  String cmd;
+  Serial.print("WiFly interactive mode.");
+  Serial.setTimeout(100);
+  while (true) {
+    while (data_available()) {
+      Serial.print(SPI_Uart_ReadByte(RHR));
+    }
+    cmd = Serial.readString();
+    if (cmd != "") {
+      Serial.println("");
+      write(cmd);
+    }
+  }
 }
