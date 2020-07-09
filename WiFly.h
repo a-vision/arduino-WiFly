@@ -65,6 +65,7 @@ public:
   String read(String  until);
   String read();
   String readln();
+  bool writeln(String  data);
   bool write(String  data);
 
   bool monitor();

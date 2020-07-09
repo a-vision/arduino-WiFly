@@ -179,8 +179,7 @@ bool WiFlyDevice::SPI_Uart_Init(void) // Initialize and test SC16IS750
 void WiFlyDevice::SPI_Uart_println(String data)
 // Write array to SC16IS750 followed by a carriage return
 {
-  DBG(data, true);
-  SPI_Uart_WriteArray(data, data.length());
+  SPI_Uart_print(data);
   SPI_Uart_WriteByte(THR, 0x0d);
   delay(250);
 }
@@ -191,7 +190,6 @@ void WiFlyDevice::SPI_Uart_print(String data)
   DBG("send: ", false);
   DBG(data, false);
   SPI_Uart_WriteArray(data, data.length());
-  delay(250);
 }
 
 char WiFlyDevice::spi_transfer(volatile char data)
@@ -519,6 +517,11 @@ String WiFlyDevice::read(String until = "")
   return response;
 }
 
+bool WiFlyDevice::writeln(String data)
+{
+  SPI_Uart_println(data);
+  return true;
+}
 bool WiFlyDevice::write(String data)
 {
   SPI_Uart_print(data);

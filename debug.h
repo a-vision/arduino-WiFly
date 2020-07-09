@@ -14,18 +14,11 @@
 #if DEBUG
 
 #define DBG(msg, newline) \
-if (newline) { \
-  Serial.println(msg); \
-} \
-else \
-{ \
-  Serial.print(msg); \
-};
+Serial.print(msg); \
+if (newline) Serial.println();
 
 #else
-
 #define DBG(msg, newline)
-
 #endif
 
 #endif
